@@ -1,0 +1,19 @@
+Dan Allen
+
+This describes two java classes written to create a master and save framework for distributing jobs.  The goal is to create a master class that holds jobs and waits for slaves to request jobs.  The master then gives jobs to the slaves and waits for results from the completed jobs.  It stores those results.  The system allows input and output of jobs to multiple slaves at any given time.This framework was written into two classes: master.java and slave.java.  They are described in detail below.
+
+
+master.java
+master.java maintains data that is available for any method within the class.  This data includes the number of jobs to be completed, a list of those jobs, and the size of those jobs.  Jobs are removed from the job list when slaves complete them.  For this framework the master hands the slave numbers and the slave returns all the prime numbers.  The main method of master.java calls
+master.start();
+and that begins a new MyThread that calls SlaveConnect.  SlaveConnect takes as an argument the port number (here 8002) on which master will listen for slaves.  When SlaveConnect runs it tries to create a new socket with the slave and, if successful, starts a new SlaveStream.  SlaveStream handles all of the input and output between the master and slave.  A separate MyThread is created for each slave that connects with the master, so that several slaves can process jobs at a given time.  A socket connection is specified by to IP addresses and two ports.  So, even though the master is communicating on port 8002 with all of the slaves, each slave connects on a unique socket.  This way several the jobs can be processed at the same time.  
+ SHAPE  \* MERGEFORMAT 
+SlaveStream waits for the slave to indicate that it is ready to begin a job.  It waits for the string “Ready” to be received.  Once it gets that stream, sends the slave two strings.  The first contains how many numbers are being sent, and the second contains the numbers.  SlaveStream then waits for the slave to respond with the prime numbers.
+SlaveStream executes all of that input and output within a try block.  If anything disrupts the I/O during that time, the corresponding catch statement adds the job that the slave had been assigned back to the job list, so that it can be assigned to another slave.  The prime numbers found are printed out when all of the jobs have been completed.
+
+
+
+
+slave.java
+The main method of slave.java calls ConnectToMaster.  This method creates a new object of type MySlave.  MySlave objects have an InputStream, an OutputStream and a Socket.  It is assumed that the slaves know the master’s IP address before compile time.  The slave uses a BufferedReader and a PrintWriter for input and output to the master.  The slave sends the “Ready” signal and then receives the job.  It finds the prime numbers and sends the completed job to the master.  If the master has no jobs left for the slave, the slave quits and tells the master that it should quit as well.
+All data input and output is done using BufferedReader and a  PrintWriter. this means that the jobs (although the data consists only of ints) is sent back and forth in strings.  While this is the conventional method for data transfer, eventually this sort of framework should be written to use arrays of ints as input and output.
