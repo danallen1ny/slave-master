@@ -1,0 +1,187 @@
+                                                                     
+                                                                     
+                                                                     
+                                             
+//------------------------------------------------------------------
+//Master.java
+//Dan Allen
+//A basic master class that waits for a slave to ask for a job, 
+//hands the slave an array of numbers, then waits for a response
+//master stays open until all jobs are completed
+//------------------------------------------------------------------
+
+
+import java.util.*;
+import java.io.*;
+import java.net.*;
+
+public class Master
+{
+  
+ static Vector<Integer> job_list = new Vector<Integer>(); 
+ //completed jobs are removed from the list
+ //if a slave begins and job and then stops
+ //the job is added to thelist again
+ 
+ 
+ static int job_number = 0;
+ final static int howManyJobs = 5;
+ final static int size_of_job = 1000; 
+ final static int MASTER_PORT = 8002;  //the port used for data I/O
+ protected Thread MyThread;
+ static String all_primes_found = "";
+ 
+  public Master()  //constructor for class Master
+ {
+    
+    for (int i = 1; i <= howManyJobs; i++)
+        {job_list.add(i);}
+    try {MyThread = new SlaveConnect(MASTER_PORT);} 
+    catch (IOException ie) 
+        {System.err.println("Couldn't start Connection to Slave: " + ie);} 
+   
+ }
+  
+  
+ public void start() //this begins a thread
+  {
+   MyThread.start();
+   return;
+  }
+ 
+ static int[] createjob(int num)
+ {
+   int lowbound = size_of_job*(num - 1);
+   int upbound = (size_of_job*num) - 1;
+   int[] array = new int[size_of_job];
+   
+   if(lowbound == 0) 
+     {
+      lowbound = 1;
+      upbound = upbound + 1;
+     }
+   int counter = 0;
+   for(int i = lowbound; i <= upbound; i++)
+                {
+                 array[counter] = i;
+                 counter++;
+                }
+   
+   return array;
+ }
+ 
+ static class SlaveStream extends Thread//this class controls the I/O with the slave
+ {                                    
+   private Socket s;   //this is the socket established in SlaveConnect
+   public SlaveStream(Socket cs) 
+   {
+     super("Stream");
+     s = cs;
+   }
+ public void run() 
+ {
+   String slaveRequest, response;
+   BufferedReader reader;
+   PrintWriter writer;
+   
+   InputStream in = null;
+   OutputStream out = null ;
+ 
+     try 
+       {
+         in = s.getInputStream();
+         out = s.getOutputStream();
+ 
+         reader = new BufferedReader(new InputStreamReader(in));
+         writer = new PrintWriter(new OutputStreamWriter(out));
+    
+         slaveRequest = reader.readLine();      
+             
+         if (slaveRequest.startsWith("Ready")) //this confirms that the slave
+             {                                 //has the correct input         
+                if(!(job_list.isEmpty()))
+                  {
+                   writer.println(size_of_job);
+                   writer.flush();  
+                   
+                   job_number = job_list.remove(0);
+            
+                   System.out.println("The job selected was: " + job_number);
+                   System.out.print("The jobs remaining are: ");            
+                   for (Enumeration e = job_list.elements() ; e.hasMoreElements() ;) 
+                       {System.out.print(e.nextElement() + " ");}
+                   System.out.println();
+            
+                   int [] job = new int[size_of_job];
+                   job = createjob(job_number);
+            
+                   String danstring = "";  //we'll keep the array in a string
+                   for(int i = 0; i < job.length; i++)
+                      {danstring = danstring + job[i] + " ";}
+            
+                   writer.println(danstring); //this gives the job to the slave
+                   writer.flush();
+            
+                   response = reader.readLine();
+             //      System.out.println("Slave Found Primes: '" + response + "'");
+                   all_primes_found = all_primes_found + response; 
+                   if(job_list.size() == 0)
+                     {System.out.println("All of the jobs  are complete.  Primes found: " + all_primes_found);}
+                 } 
+               else
+                 {          
+                 System.exit(0);
+                 }
+             }     
+     
+        }
+     catch (IOException ie) 
+            {job_list.add(job_number);}
+     finally 
+            {
+             try { in.close(); } catch (IOException ie) { }
+             try { out.close(); } catch (IOException ie) { }
+             try { s.close(); } catch (IOException ie) { }
+            }
+ }//end of run
+ 
+} //end of SlaveStream
+ 
+ 
+ static class SlaveConnect extends Thread
+{
+     ServerSocket socket;
+
+     SlaveConnect(int port) 
+       throws IOException
+        {
+         super("Slave Connection");
+         socket = new ServerSocket(port);
+        }
+
+     public void run() 
+        {
+         Socket sock;
+         while(!(job_list.isEmpty())) 
+              { 
+                try 
+                    {
+                     sock = socket.accept();
+                     (new SlaveStream(sock)).start();
+                    }
+                catch (IOException ie) 
+                    { break; }
+              }
+          return;
+        }
+}//end of SlaveConnect
+ 
+ 
+ public static void main(String[] args)
+   {
+   Master master = new Master();
+   master.start();
+   return;
+   }
+ 
+}
