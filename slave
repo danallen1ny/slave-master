@@ -1,0 +1,149 @@
+                                                                     
+                                                                     
+                                                                     
+                                             
+//------------------------------------------------------------------
+//Slave.java
+//Dan Allen
+//A basic slave class that connects to a Master when it opens and 
+//asks for a job. then returns the solution of the job to the master
+//------------------------------------------------------------------
+
+
+import java.util.*;
+import java.io.*;
+import java.net.*;
+
+public class Slave 
+{
+ 
+  
+  public static Vector<Integer> findPrimes(int array[])
+  {          
+          Vector<Integer> primes = new Vector<Integer>();
+                            
+          for(int j = 0; j < array.length; j++) 
+             { 
+               boolean isPrime = true;  
+               for(int k = 2; k < array[j]; k++)
+                   {
+                   if (array[j] % k == 0)
+                   {isPrime = false;}
+                   }              
+                   if (isPrime)
+                   {
+                    primes.add(array[j]);
+                    
+                   }
+              }
+          
+           return primes;
+  }
+  
+  public static int[] parseString(String string, int len)
+  {
+          int [] array = new int[len];
+          int i=0;
+          StringTokenizer tokenizer = new StringTokenizer(string);
+          while (tokenizer.hasMoreTokens()) 
+             {
+              Integer s = new Integer((String) tokenizer.nextElement());
+              array[i] = s.intValue();
+              i++;
+             }    
+          return array; 
+  }
+  
+  static void ConnectToMaster()
+  {
+   String jobsize, sent, received, close;
+   MySlave slave;
+   BufferedReader reader;
+   PrintWriter writer;
+    
+   slave = new MySlave("localhost", 8002);
+   
+   try
+     {
+      reader = new BufferedReader(new InputStreamReader(slave.in));
+      writer = new PrintWriter(new OutputStreamWriter(slave.out));
+   
+      sent = "Ready";    
+      writer.println(sent);   //Indicate to master that slave is ready for a job 
+      writer.flush();
+      jobsize = reader.readLine();  //this has the job size
+      received = reader.readLine(); //this has the job
+      
+      
+      if(!(received == null))
+         {
+           Integer size = new Integer((String) jobsize);
+           int size_of_job = size.intValue();
+          
+           int[] job = new int[size_of_job];
+           job = parseString(received, size_of_job);  
+      
+           Vector<Integer> primes = new Vector<Integer>();
+           primes = findPrimes(job);
+      
+           String result = new String();
+      
+           while(!(primes.isEmpty()))
+                 {result = result + primes.remove(0).toString() + " ";}
+           writer.println(result);  //submit results to master
+           writer.flush();
+          }
+      else
+          {
+           System.out.println("All jobs complete.  Quitting Slave");
+           System.exit(0);
+          }
+     }//end try
+   catch (IOException e)
+     {
+      System.out.println("IOException in Master.in.readline()");
+      System.out.println(e);
+     }
+   return;
+    
+ }//end ConnectTo Master
+  
+  public static void main(String [] args)
+  {
+    ConnectToMaster();
+  }
+   
+   
+   
+}
+
+ 
+  
+
+
+//---------------------------------------------------------------------------------
+
+class MySlave
+{
+  
+ 
+ public InputStream in;
+ public OutputStream out;
+ 
+ private Socket slave;
+ 
+ public MySlave(String host, int port)
+  {
+    try
+    {
+     slave = new Socket(host, port);
+   
+     out = slave.getOutputStream();
+     in = slave.getInputStream();
+    }
+    catch (IOException e)
+    {
+      System.out.println("IOExc :" + e);      
+    }
+  }
+}
